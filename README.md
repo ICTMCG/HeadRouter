@@ -14,7 +14,7 @@ Diffusion Transformers (DiTs) have exhibited robust capabilities in image genera
 ![](assets/pipeline.png)
 
 ## Comparison with baselines
-![](assets/main_compaer.png)
+![](assets/main_compare.png)
 
 ## More of our results
 ![](assets/more_results.png)
