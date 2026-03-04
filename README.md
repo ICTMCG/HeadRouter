@@ -49,6 +49,19 @@ Below is our recommended hyper-parameter configuration for various inversion and
 
 *(Note: Stopping Time and Strength are parameters for Controller Guidance η_t)*
 
+## 📄 Citation
+
+If you find this work useful, please consider citing:
+
+```bibtex
+@article{xu2024headrouter,
+  title={Headrouter: A training-free image editing framework for mm-dits by adaptively routing attention heads},
+  author={Xu, Yu and Tang, Fan and Cao, Juan and Zhang, Yuxin and Kong, Xiaoyu and Li, Jintao and Deussen, Oliver and Lee, Tong-Yee},
+  journal={arXiv preprint arXiv:2411.15034},
+  year={2024}
+}
+```
+
 ## Acknowledgements
 
 This work is built upon several excellent open-source projects and research efforts. We sincerely thank the authors and contributors for making their work publicly available and for advancing the community:
@@ -58,6 +71,7 @@ This work is built upon several excellent open-source projects and research effo
   
 - **RF-Inversion**  
   https://github.com/LituRout/RF-Inversion
+
 
 ## Pipeline
 ![](assets/pipeline.png)
