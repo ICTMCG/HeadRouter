@@ -19,7 +19,7 @@ Diffusion Transformers (DiTs) have exhibited robust capabilities in image genera
 
 1. **Clone the repository and install the environment:**
    ```bash
-   git clone [https://github.com/your-repo/HeadRouter.git](https://github.com/your-repo/HeadRouter.git)
+   git clone https://github.com/your-repo/HeadRouter.git
    cd HeadRouter/diffusers
    pip install -e .
 
@@ -48,6 +48,16 @@ Below is our recommended hyper-parameter configuration for various inversion and
 | Stylization | 0 | 6 | 0.9 |
 
 *(Note: Stopping Time and Strength are parameters for Controller Guidance η_t)*
+
+## Acknowledgements
+
+This work is built upon several excellent open-source projects and research efforts. We sincerely thank the authors and contributors for making their work publicly available and for advancing the community:
+
+- **Diffusers**  
+  https://github.com/huggingface/diffusers
+  
+- **RF-Inversion**  
+  https://github.com/LituRout/RF-Inversion
 
 ## Pipeline
 ![](assets/pipeline.png)
