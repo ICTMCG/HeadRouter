@@ -39,7 +39,7 @@ Below is our recommended hyper-parameter configuration for various inversion and
 
 **Hyper-parameter configuration of our method for inversion and editing tasks**
 
-| Task | Starting Time (s) | Stopping Time (τ) | Strength (η) |
+| Task | Starting Time | Stopping Time | Strength |
 | :--- | :---: | :---: | :---: |
 | Object insert | 0 | 6 | 1.0 |
 | Gender editing | 0 | 8 | 1.0 |
@@ -47,9 +47,9 @@ Below is our recommended hyper-parameter configuration for various inversion and
 | Adding glasses | 6 | 25 | 0.7 |
 | Stylization | 0 | 6 | 0.9 |
 
-*(Note: Stopping Time and Strength are parameters for Controller Guidance η_t)*
+*(Note: Stopping Time and Strength are parameters for Controller Guidance)*
 
-## 📄 Citation
+## Citation
 
 If you find this work useful, please consider citing:
 
