@@ -30,7 +30,10 @@ Diffusion Transformers (DiTs) have exhibited robust capabilities in image genera
    ```
 
 > **Important Note on Hyper-parameters:**
-> Please note that training-free image editing relies heavily on hyper-parameter tuning. You will need to adjust the hyper-parameters based on the specific input image and the type of editing you want to perform. 
+> Please note that training-free image editing relies heavily on hyper-parameter tuning. You will need to adjust the hyper-parameters based on the specific input image and the type of editing you want to perform.
+
+> **Tips:**
+> The larger the --eta value, the closer the edited result will be to the original image.
 
 Below is our recommended hyper-parameter configuration for various inversion and editing tasks:
 
