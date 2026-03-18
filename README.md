@@ -56,9 +56,9 @@ If you find this work useful, please consider citing:
 ```bibtex
 @article{xu2024headrouter,
   title={Headrouter: A training-free image editing framework for mm-dits by adaptively routing attention heads},
-  author={Xu, Yu and Tang, Fan and Cao, Juan and Zhang, Yuxin and Kong, Xiaoyu and Li, Jintao and Deussen, Oliver and Lee, Tong-Yee},
-  journal={arXiv preprint arXiv:2411.15034},
-  year={2024}
+  author={Xu, Yu and Tang, Fan and Cao, Juan and Kong, Xiaoyu and Zhang, Yuxin and Li, Jintao and Deussen, Oliver and Lee, Tong-Yee},
+  journal={ACM Transactions on Graphics},
+  publisher={ACM New York, NY}
 }
 ```
 
