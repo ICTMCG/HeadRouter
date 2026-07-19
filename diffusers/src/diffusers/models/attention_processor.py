@@ -1781,22 +1781,45 @@ class FluxAttnProcessor2_0:
             query = apply_rotary_emb(query, image_rotary_emb)
             key = apply_rotary_emb(key, image_rotary_emb)
 
-        recon_heads = hidden_states[0]  # [H, T, D]
-        edit_heads = hidden_states[1]   # [H, T, D]
-        H = attn.heads
-        v_r = recon_heads.reshape(H, -1)  # v_h^{(r)}
-        v_e = edit_heads.reshape(H, -1)   # v_h^{(e)}
-        cos_simi = F.cosine_similarity(v_r, v_e, dim=1)
-        s_max = cos_simi.max()
-        s_min = cos_simi.min()
-        denom = (s_max - s_min).clamp(min=1e-6)
-        d_tilde = (s_max - cos_simi) / denom
-        gamma = getattr(self, "iarouter_gamma", 0.2)
-        delta = getattr(self, "iarouter_delta", 0.5)
-        weights = 1.0 + gamma * torch.sigmoid(d_tilde - delta)  # [H]
-        weights_reshaped = weights.view(H, 1, 1)  # [H, 1, 1]
-        hidden_states[1] = edit_heads * weights_reshaped
-        
+        hidden_states = F.scaled_dot_product_attention(query, key, value, dropout_p=0.0, is_causal=False)
+
+        cos_simi_dict = None
+
+        head_router= True
+        if head_router:
+            # 假设 hidden_states 形状为 [batch=2, heads, tokens, dim]
+            # 约定：hidden_states[0] 为重建分支 (reconstruction)，hidden_states[1] 为编辑分支 (editing)
+
+            recon_heads = hidden_states[0]  # [H, T, D]
+            edit_heads = hidden_states[1]   # [H, T, D]
+
+            H = attn.heads
+
+            # 将每个 head 的 token 维度和特征维度展平，得到 [H, -1]
+            v_r = recon_heads.reshape(H, -1)  # v_h^{(r)}
+            v_e = edit_heads.reshape(H, -1)   # v_h^{(e)}
+
+            # 计算每个 head 的余弦相似度 s_h
+            cos_simi = F.cosine_similarity(v_r, v_e, dim=1)  # [H]
+
+            # 按论文 Eq.(2) 计算 min-max 归一化的不相似度 \tilde{d}_h
+            s_max = cos_simi.max()
+            s_min = cos_simi.min()
+            denom = (s_max - s_min).clamp(min=1e-6)  # 防止除零
+            d_tilde = (s_max - cos_simi) / denom     # [H], 对应 \tilde{d}_h
+
+            # IARouter 超参数：最大增益 gamma 和 sigmoid 中心 delta
+            # 你也可以把这两个放到类的 __init__ 里作为配置
+            gamma = getattr(self, "iarouter_gamma", 0.2)
+            delta = getattr(self, "iarouter_delta", 0.5)
+
+            # 按论文 Eq.(3) 计算每个 head 的权重 w_h = 1 + gamma * sigmoid(\tilde{d}_h - delta)
+            weights = 1.0 + gamma * torch.sigmoid(d_tilde - delta)  # [H]
+
+            # 将权重reshape成可以广播到 [H, T, D] 的形状，只作用在编辑分支
+            weights_reshaped = weights.view(H, 1, 1)  # [H, 1, 1]
+
+            hidden_states[1] = edit_heads * weights_reshaped
         hidden_states = hidden_states.transpose(1, 2).reshape(batch_size, -1, attn.heads * head_dim)
         hidden_states = hidden_states.to(query.dtype)
 
@@ -1814,14 +1837,28 @@ class FluxAttnProcessor2_0:
 
             return hidden_states, encoder_hidden_states, attn_map, cos_simi_dict
         else:
+            # Headrouter_dual token enhancement
             use_semantic_token_enhance = True
             if use_semantic_token_enhance:
+                # A: 文本 token -> 图像 token 的注意力子矩阵，形状 [N, M]
                 A = hidden_states[1][512:4608, :]  # [N_image, M_text]
+
+                # 超参数，对应论文中的 α 和 ϑ（upsilon）
                 alpha = getattr(self, "alpha_tar", 2)
                 upsilon = getattr(self, "upsilon_tar", 5.0)
-                soft_img = torch.softmax(A, dim=0)
+
+                # 按图像 token 维度做 softmax:
+                # soft_img[i, j] = exp(A[i, j]) / sum_k exp(A[k, j])
+                # 对应公式中的 exp(A_{i,j}) / sum_{k=1}^N exp(A_{k,j})
+                soft_img = torch.softmax(A, dim=0)  # 在第 0 维（图像 token 维度）做 softmax，得到 [N, M]
+
+                # 计算 \hat{w}_{i,j} = α * σ( ϑ * soft_img_{i,j} )
                 w_hat = alpha * torch.sigmoid(upsilon * soft_img)  # [N, M]
+
+                # 重标定注意力：\hat{A}_{i,j} = \hat{w}_{i,j} * A_{i,j}
                 A_hat = w_hat * A  # [N, M]
+
+                # 写回编辑分支的对应位置
                 hidden_states[1][512:4608, :] = A_hat
 
             return hidden_states

@@ -1,76 +1,102 @@
+"""HeadRouter inference entry point (RF-Inversion + HeadRouter on FLUX)."""
+
 import argparse
-import torch
-from pipeline_flux_rf_inversion import FluxRFInversionPipeline
-from diffusers import FluxImg2ImgPipeline
-from diffusers.utils import load_image
-import os
+from pathlib import Path
+
 import numpy as np
+import torch
 from PIL import Image
 
-def main():
-    parser = argparse.ArgumentParser(description="Run Flux Pipeline")
-    parser.add_argument("--model", type=str, default="/path/to/FLUX1-dev", help="Model name or path")
-    parser.add_argument("--image", type=str, default="https://raw.githubusercontent.com/CompVis/stable-diffusion/main/assets/stable-samples/img2img/sketch-mountains-input.jpg", help="URL of the input image")
-    parser.add_argument(
-        "--prompt_list", 
-        nargs='+', 
-        default=None,
-        help="List of prompts"
-    )
-    parser.add_argument("--prompt_2", type=str, help="Second prompt (if different from prompt)")
-    parser.add_argument("--num_inference_steps", type=int, default=28, help="Number of inference steps")
-    parser.add_argument("--strength", type=float, default=0.95, help="Strength parameter")
-    parser.add_argument("--guidance_scale", type=float, default=3.5, help="Guidance scale")
-    parser.add_argument("--gamma", type=float, default=0.5, help="Gamma parameter")
-    parser.add_argument("--eta", type=float, default=0.9, help="Eta parameter")
-    parser.add_argument("--start_timestep", type=int, default=0, help="Start timestep")
-    parser.add_argument("--stop_timestep", type=int, default=6, help="Stop timestep")
-    parser.add_argument("--output", type=str, default="output.jpg", help="Output image filename")
-    parser.add_argument("--use_img2img", action="store_true", help="Use FluxImg2ImgPipeline")
-    parser.add_argument("--num_images", type=int, default=1, help="Number of images to generate")
+from pipeline_flux_rf_inversion import FluxRFInversionPipeline
 
-    args = parser.parse_args()
+ROOT = Path(__file__).resolve().parent
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="HeadRouter: FLUX RF-Inversion editing")
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="black-forest-labs/FLUX.1-dev",
+        help="FLUX model id or local path",
+    )
+    parser.add_argument(
+        "--image",
+        type=str,
+        required=True,
+        help="Input image path (png/jpg) or cached .pt latents path",
+    )
+    parser.add_argument(
+        "--prompt_list",
+        nargs="+",
+        required=True,
+        help="Two prompts: source description and target edit description",
+    )
+    parser.add_argument("--num_inference_steps", type=int, default=28)
+    parser.add_argument("--strength", type=float, default=0.95)
+    parser.add_argument("--guidance_scale", type=float, default=3.5)
+    parser.add_argument("--gamma", type=float, default=0.5, help="RF-Inversion gamma")
+    parser.add_argument("--eta", type=float, default=0.9, help="RF-Inversion eta")
+    parser.add_argument("--start_timestep", type=int, default=0)
+    parser.add_argument("--stop_timestep", type=int, default=8)
+    parser.add_argument("--seed", type=int, default=8889)
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default=str(ROOT / "outputs"),
+        help="Directory to save results",
+    )
+    parser.add_argument(
+        "--block_id",
+        type=int,
+        nargs="+",
+        default=[0],
+        help="Optional head indices (legacy flag; HeadRouter uses all heads)",
+    )
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    if len(args.prompt_list) < 2:
+        raise ValueError("--prompt_list needs at least two prompts: [source, target]")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    
-    if args.use_img2img:
-        pipe = FluxImg2ImgPipeline.from_pretrained(args.model, torch_dtype=torch.bfloat16)
-    else:
-        pipe = FluxRFInversionPipeline.from_pretrained(args.model, torch_dtype=torch.bfloat16)
-    
-    pipe = pipe.to(device)
+    pipe = FluxRFInversionPipeline.from_pretrained(
+        args.model, torch_dtype=torch.bfloat16
+    ).to(device)
 
-    if args.image.startswith('http://') or args.image.startswith('https://'):
-        init_image = load_image(args.image).resize((1024, 1024))
-    else:
-        file_name = os.path.splitext(os.path.basename(args.image))[0]
-        pt_file_path = f"/{file_name}_latents.pt"
-        if os.path.exists(pt_file_path):
-            init_image = args.image
-        else:
-            init_image = args.image
-    block_id_list = [[0]]
+    image_path = str(Path(args.image).expanduser().resolve())
+    file_name = Path(image_path).stem
 
-    
-    prompt_list = args.prompt_list
-    kwargs = {"gamma": 0.5, "eta": 0.9, "start_timestep": 0, "stop_timestep": 9},
-    torch.manual_seed(8889)
-    save_path = "/save_dir"
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-    for block_id in block_id_list:
-        images = pipe(
-            prompt=prompt_list,
-            image=init_image,
-            num_inference_steps=args.num_inference_steps,
-            strength=args.strength,
-            generator=torch.Generator("cpu").manual_seed(8889),
-            guidance_scale=args.guidance_scale,
-            block_id = block_id,
-            **kwargs,
-        ).images
-        joined_images = np.concatenate(images, axis=1)
-        img_path="res.png"
-        Image.fromarray(joined_images).save(os.path.join(save_path, img_path))
+    torch.manual_seed(args.seed)
+    generator = torch.Generator("cpu").manual_seed(args.seed)
+
+    images = pipe(
+        prompt=args.prompt_list,
+        image=image_path,
+        num_inference_steps=args.num_inference_steps,
+        strength=args.strength,
+        generator=generator,
+        guidance_scale=args.guidance_scale,
+        gamma=args.gamma,
+        eta=args.eta,
+        start_timestep=args.start_timestep,
+        stop_timestep=args.stop_timestep,
+        block_id=list(args.block_id),
+    ).images
+
+    out_dir = Path(args.output_dir) / file_name
+    out_dir.mkdir(parents=True, exist_ok=True)
+    joined = np.concatenate(images, axis=1)
+    out_name = (
+        f"gamma{args.gamma}_eta{args.eta}"
+        f"_s{args.start_timestep}e{args.stop_timestep}_{args.seed}.png"
+    )
+    out_path = out_dir / out_name
+    Image.fromarray(joined).save(out_path)
+    print(f"Saved: {out_path}")
+
+
 if __name__ == "__main__":
     main()

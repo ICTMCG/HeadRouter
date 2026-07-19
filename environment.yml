@@ -1,0 +1,30 @@
+name: diffusers0.18.0
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10.13
+  - pip
+  - pip:
+      - torch==2.1.0
+      - torchvision==0.16.0
+      - torchaudio==2.1.0
+      - transformers==4.41.2
+      - accelerate==1.6.0
+      - huggingface-hub==0.26.0
+      - safetensors==0.4.5
+      - sentencepiece==0.1.99
+      - protobuf==4.24.4
+      - Pillow==9.5.0
+      - numpy==1.26.1
+      - einops==0.8.0
+      - scipy==1.11.4
+      - matplotlib==3.8.2
+      - tqdm==4.66.1
+      - regex==2023.10.3
+      - requests==2.31.0
+# After creating the env, install the patched diffusers:
+#   conda activate diffusers0.18.0
+#   pip install -e ./diffusers

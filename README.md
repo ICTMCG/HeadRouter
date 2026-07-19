@@ -17,17 +17,49 @@ Diffusion Transformers (DiTs) have exhibited robust capabilities in image genera
 
 ## Installation & Usage
 
-1. **Clone the repository and install the environment:**
-   ```bash
-   git clone https://github.com/your-repo/HeadRouter.git
-   cd HeadRouter/diffusers
-   pip install -e .
+1. **Clone the repository and set up the environment.** The code is tested with the conda environment `diffusers0.18.0` (Python 3.10, PyTorch 2.1 + CUDA 12.1). You must install the **local** patched `diffusers` in this repo — stock Hugging Face `diffusers` does not include the HeadRouter modifications.
 
-2. **Run Inference:**
-   You can run the inference script using:
    ```bash
-   python infer.py
+   git clone https://github.com/ICTMCG/HeadRouter.git
+   cd HeadRouter
+
+   # Option A: recreate the conda environment
+   conda env create -f environment.yml
+   conda activate diffusers0.18.0
+
+   # Option B: use your own environment
+   # pip install -r requirements.txt
+
+   # Install the patched local diffusers (required)
+   pip install -e ./diffusers
    ```
+
+2. **Prepare the FLUX.1-dev weights** (via a Hugging Face login, or point to a local checkpoint):
+
+   ```bash
+   huggingface-cli login
+   # or pass a local path at run time: --model /path/to/FLUX.1-dev
+   ```
+
+3. **Run inference.** Use the provided example script:
+
+   ```bash
+   bash scripts/infer_tree2.sh
+   ```
+
+   or call `main.py` directly:
+
+   ```bash
+   python main.py \
+     --image examples/images/tree2.png \
+     --eta 0.9 \
+     --gamma 0.5 \
+     --start_timestep 0 \
+     --stop_timestep 8 \
+     --prompt_list "A tree" "A tree with lightning and the Moon"
+   ```
+
+   `--prompt_list` takes `[source_prompt, target_prompt]`, and results are saved under `outputs/<image_stem>/`.
 
 > **Important Note on Hyper-parameters:**
 > Please note that training-free image editing relies heavily on hyper-parameter tuning. You will need to adjust the hyper-parameters based on the specific input image and the type of editing you want to perform.

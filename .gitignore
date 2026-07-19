@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Envs
+.env
+.venv/
+venv/
+env/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Outputs & caches
+outputs/**
+!outputs/.gitkeep
+examples/latents/
+*.pt
+*.pth
+*.safetensors
+*.bin
+*.ckpt
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Diffusers local artifacts
+diffusers/**/__pycache__/

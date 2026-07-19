@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing import Any, Dict, Optional, Tuple, Union, Callable
+from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -35,11 +35,6 @@ from ...utils import USE_PEFT_BACKEND, is_torch_version, logging, scale_lora_lay
 from ...utils.torch_utils import maybe_allow_in_graph
 from ..embeddings import CombinedTimestepGuidanceTextProjEmbeddings, CombinedTimestepTextProjEmbeddings, FluxPosEmbed
 from ..modeling_outputs import Transformer2DModelOutput
-
-from . import merge
-from . import merge_batch
-from .utils import isinstance_str, init_generator, join_frame, split_frame, func_warper, join_warper, split_warper
-import math
 
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -97,6 +92,7 @@ class FluxSingleTransformerBlock(nn.Module):
         norm_hidden_states, gate = self.norm(hidden_states, emb=temb)
         mlp_hidden_states = self.act_mlp(self.proj_mlp(norm_hidden_states))
         joint_attention_kwargs = joint_attention_kwargs or {}
+
         attn_output = self.attn(
             hidden_states=norm_hidden_states,
             image_rotary_emb=image_rotary_emb,
@@ -105,7 +101,6 @@ class FluxSingleTransformerBlock(nn.Module):
             index_block=index_block,
             **joint_attention_kwargs,
         )
-
         hidden_states = torch.cat([attn_output, mlp_hidden_states], dim=2)
         gate = gate.unsqueeze(1)
         hidden_states = gate * self.proj_out(hidden_states)
@@ -186,6 +181,8 @@ class FluxTransformerBlock(nn.Module):
             encoder_hidden_states, emb=temb
         )
         joint_attention_kwargs = joint_attention_kwargs or {}
+
+        # Attention.
         attn_output, context_attn_output, attn_map, cos_simi_dict = self.attn(
             hidden_states=norm_hidden_states,
             encoder_hidden_states=norm_encoder_hidden_states,
@@ -519,6 +516,7 @@ class FluxTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOrig
                 )
 
             else:
+                # Headrouter method: residual blocks
                 if index_block > 0:
                     encoder_hidden_states = 0.1*previous + 0.9*encoder_hidden_states
                     hidden_states = 0*previous_img + 1*hidden_states
